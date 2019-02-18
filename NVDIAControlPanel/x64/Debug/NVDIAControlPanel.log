@@ -1,0 +1,16 @@
+﻿  main.cpp
+g:\workingprojects\nvidia_development\nvidiacontrolpanel\nvdiacontrolpanel\main.cpp(66): warning C4018: '<': signed/unsigned mismatch
+g:\workingprojects\nvidia_development\nvidiacontrolpanel\nvdiacontrolpanel\main.cpp(90): warning C4018: '<': signed/unsigned mismatch
+g:\workingprojects\nvidia_development\nvidiacontrolpanel\nvdiacontrolpanel\main.cpp(47): warning C4477: 'wprintf' : format string '%s' requires an argument of type 'wchar_t *', but variadic argument 1 has type 'NvU16 *'
+g:\workingprojects\nvidia_development\nvidiacontrolpanel\nvdiacontrolpanel\main.cpp(68): warning C4477: 'wprintf' : format string '%s' requires an argument of type 'wchar_t *', but variadic argument 1 has type 'NvU16 *'
+g:\workingprojects\nvidia_development\nvidiacontrolpanel\nvdiacontrolpanel\main.cpp(69): warning C4477: 'wprintf' : format string '%s' requires an argument of type 'wchar_t *', but variadic argument 1 has type 'NvU16 *'
+g:\workingprojects\nvidia_development\nvidiacontrolpanel\nvdiacontrolpanel\main.cpp(95): warning C4477: 'wprintf' : format string '%s' requires an argument of type 'wchar_t *', but variadic argument 1 has type 'NvU16 *'
+g:\workingprojects\nvidia_development\nvidiacontrolpanel\nvdiacontrolpanel\main.cpp(115): warning C4477: 'wprintf' : format string '%s' requires an argument of type 'wchar_t *', but variadic argument 1 has type 'NvU16 *'
+g:\workingprojects\nvidia_development\nvidiacontrolpanel\nvdiacontrolpanel\main.cpp(392): warning C4996: '_sleep': This function or variable has been superceded by newer library or operating system functionality. Consider using Sleep instead. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\stdlib.h(1266): note: see declaration of '_sleep'
+g:\workingprojects\nvidia_development\nvidiacontrolpanel\nvdiacontrolpanel\main.cpp(405): warning C4996: '_sleep': This function or variable has been superceded by newer library or operating system functionality. Consider using Sleep instead. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\stdlib.h(1266): note: see declaration of '_sleep'
+g:\workingprojects\nvidia_development\nvidiacontrolpanel\nvdiacontrolpanel\main.cpp(419): warning C4996: '_sleep': This function or variable has been superceded by newer library or operating system functionality. Consider using Sleep instead. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\stdlib.h(1266): note: see declaration of '_sleep'
+  NVDIAControlPanel.vcxproj -> G:\WorkingProjects\NVIDIA_Development\NVIDIAControlPanel\NVDIAControlPanel\x64\Debug\NVDIAControlPanel.exe
+  NVDIAControlPanel.vcxproj -> G:\WorkingProjects\NVIDIA_Development\NVIDIAControlPanel\NVDIAControlPanel\x64\Debug\NVDIAControlPanel.pdb (Full PDB)
