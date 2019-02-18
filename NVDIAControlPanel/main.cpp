@@ -265,47 +265,79 @@ namespace ControlPanel
 		};
 	};
 
+	NvAPI_Status GetGPUs(NvPhysicalGpuHandle gpuHandlers[NVAPI_MAX_PHYSICAL_GPUS], NvU32 &gpuCount)
+	{
+		NvAPI_Status status;
+
+		// Get all GPU handles
+		status = NvAPI_EnumPhysicalGPUs(gpuHandlers, &gpuCount);
+		if (status != NVAPI_OK)
+		{
+			PrintError(status);
+		}
+
+		return status;
+	}
+
+	NvAPI_Status GetConnectedDisplays(NvPhysicalGpuHandle gpuHandle, NV_GPU_DISPLAYIDS **displayIDs, NvU32 &displayIDCount)
+	{
+		NvAPI_Status status;
+
+		// Get the connected display ID's array
+		status = NvAPI_GPU_GetConnectedDisplayIds(gpuHandle, NULL, &displayIDCount, NV_GPU_CONNECTED_IDS_FLAG_UNCACHED);
+		if (status != NVAPI_OK)
+		{
+			PrintError(status);
+			return status;
+		}
+
+		NV_GPU_DISPLAYIDS *tempDisplayID = (NV_GPU_DISPLAYIDS *)malloc(sizeof(NV_GPU_DISPLAYIDS)*displayIDCount);
+		memset(tempDisplayID, 0, displayIDCount * sizeof(NV_GPU_DISPLAYIDS));
+		tempDisplayID->version = NV_GPU_DISPLAYIDS_VER;
+
+		// second call to get the display ids
+		status = NvAPI_GPU_GetConnectedDisplayIds(gpuHandle, tempDisplayID, &displayIDCount, NV_GPU_CONNECTED_IDS_FLAG_UNCACHED);
+		if (status != NVAPI_OK)
+		{
+			PrintError(status);
+			return status;
+		}
+
+		*displayIDs = tempDisplayID;
+		return status;
+	}
+
 	NvAPI_Status GetConnectedDisplays(NvU32 *displayIDs, NvU32 *numDisplay)
 	{
 		NvAPI_Status status;
 
-		NvPhysicalGpuHandle gpuHandle[NVAPI_MAX_PHYSICAL_GPUS] = { 0 };
+		NvPhysicalGpuHandle gpuHandlers[NVAPI_MAX_PHYSICAL_GPUS] = { 0 };
 		NvU32 gpuCount = 0;
 		NvU32 num = 0;
 
-		// Get all the physical GPU handles
-		status = NvAPI_EnumPhysicalGPUs(gpuHandle, &gpuCount);
-		if (status != NVAPI_OK)
-			return status;
+		// Get all the physical GPU handlers
+		GetGPUs(gpuHandlers, gpuCount);
 
 		for (NvU32 i = 0; i < gpuCount; i++)
 		{
 			NvU32 displayIDCount = 0;
-			if ((status = NvAPI_GPU_GetConnectedDisplayIds(gpuHandle[i], NULL, &displayIDCount, 0)) != NVAPI_OK)
+
+			// alocations for the display ids
+			NV_GPU_DISPLAYIDS *tempDisplayIDs = NULL;
+			status = GetConnectedDisplays(gpuHandlers[i], &tempDisplayIDs, displayIDCount);
+			if (status != NVAPI_OK)
 			{
 				return status;
 			}
 
-			if (displayIDCount > 0)
+			for (NvU32 dispIndex = 0; dispIndex < displayIDCount; dispIndex++)
 			{
-				// alocations for the display ids
-				NV_GPU_DISPLAYIDS *dispIds = (NV_GPU_DISPLAYIDS *)malloc(sizeof(NV_GPU_DISPLAYIDS)*displayIDCount);
-
-				for (NvU32 dispIndex = 0; dispIndex < displayIDCount; dispIndex++)
-					dispIds[dispIndex].version = NV_GPU_DISPLAYIDS_VER; // adding the correct version information
-
-																		// second call to get the display ids
-				if ((status = NvAPI_GPU_GetConnectedDisplayIds(gpuHandle[i], dispIds, &displayIDCount, 0)) != NVAPI_OK)
-				{
-					return status;
-				}
-
-				for (NvU32 dispIndex = 0; dispIndex < displayIDCount; dispIndex++)
-				{
-					displayIDs[num] = dispIds[dispIndex].displayId;
-					num++;
-				}
+				displayIDs[num] = tempDisplayIDs[dispIndex].displayId;
+				num++;
 			}
+
+			if (tempDisplayIDs != NULL)
+				free((void *)tempDisplayIDs);
 		}
 
 		*numDisplay = num;
@@ -327,7 +359,7 @@ namespace ControlPanel
 		custom->yRatio = 1;
 	}
 
-	NvAPI_Status ApplyCustomDisplay()
+	NvAPI_Status ApplyCustomDisplay(NV_CUSTOM_DISPLAY *custom)
 	{
 		NvAPI_Status status;
 
@@ -357,8 +389,7 @@ namespace ControlPanel
 
 		for (NvU32 count = 0; count < numDisplay; count++)
 		{
-			//Load the NV_CUSTOM_DISPLAY structure with data from XML file
-			CreateCustomDisplay(&customs[count]);
+			customs[count] = *custom;
 
 			timing.height = customs[count].height;
 			timing.width = customs[count].width;
@@ -380,7 +411,6 @@ namespace ControlPanel
 		printf("%d X %d @ %0.2f hz\n", customs[0].width, customs[0].height, rr);
 
 		printf("NvAPI_DISP_TryCustomDisplay()\n");
-
 		status = NvAPI_DISP_TryCustomDisplay(&displayIDs[0], numDisplay, &customs[0]); // trying to set custom display
 		if (status != NVAPI_OK)
 		{
@@ -470,7 +500,9 @@ namespace Examples
 
 	void CustomizeDisplay()
 	{
-		NvAPI_Status status = ControlPanel::ApplyCustomDisplay();
+		NV_CUSTOM_DISPLAY custom;
+		ControlPanel::CreateCustomDisplay(&custom);
+		NvAPI_Status status = ControlPanel::ApplyCustomDisplay(&custom);
 		CheckStatus(status);
 	}
 
