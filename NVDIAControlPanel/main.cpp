@@ -264,6 +264,7 @@ namespace ControlPanel
 			}
 		};
 	};
+	
 
 	NvAPI_Status GetGPUs(NvPhysicalGpuHandle gpuHandlers[NVAPI_MAX_PHYSICAL_GPUS], NvU32 &gpuCount)
 	{
@@ -656,6 +657,35 @@ namespace ControlPanel
 		return status;
 	}
 
+	NvAPI_Status ReadGPUDriverInfo()
+	{
+		NvAPI_Status status;
+
+		NvPhysicalGpuHandle gpuHandles[NVAPI_MAX_PHYSICAL_GPUS] = { 0 };
+		NvU32 gpuCount = 0;
+
+		status = GetGPUs(gpuHandles, gpuCount);
+		if (status != NVAPI_OK)
+		{
+			return status;
+		}
+
+		for (NvU32 i = 0; i < gpuCount; i++)
+		{
+			NV_DISPLAY_DRIVER_MEMORY_INFO memoryInfo;
+			memset(&memoryInfo, 0, sizeof(NV_DISPLAY_DRIVER_MEMORY_INFO));
+			memoryInfo.version = NV_DISPLAY_DRIVER_MEMORY_INFO_VER;
+
+			status = NvAPI_GPU_GetMemoryInfo(gpuHandles[i], &memoryInfo);
+			if (status != NVAPI_OK)
+			{
+				return status;
+			}
+		}
+
+		return status;
+	}
+
 	NvAPI_Status RestoreAllDefaults()
 	{
 		NvAPI_Status status;
@@ -692,6 +722,12 @@ namespace Examples
 	void EnumerateAllProfile()
 	{
 		NvAPI_Status status = ControlPanel::Profile::EnumerateAllProfile();
+		CheckStatus(status);
+	}
+
+	void ReadGPUDriverInfo()
+	{
+		NvAPI_Status status = ControlPanel::ReadGPUDriverInfo();
 		CheckStatus(status);
 	}
 
@@ -767,7 +803,7 @@ int main(int argc, char **argv)
 	if (status != NVAPI_OK)
 		PrintError(status);
 
-	Examples::DisplayConfiguration();
+	Examples::ReadGPUDriverInfo();
 
 	NvAPI_Unload();
 	return 0;
