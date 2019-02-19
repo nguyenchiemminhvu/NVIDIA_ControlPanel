@@ -350,7 +350,6 @@ namespace ControlPanel
 
 		NvU32 numDisplay = 0;
 		NvU32 displayIDs[NVAPI_MAX_DISPLAYS] = { 0 };
-		NvDisplayHandle displayHandles[NVAPI_MAX_DISPLAYS] = { 0 };
 		
 		status = GetConnectedDisplays(displayIDs, &numDisplay);
 		if (status != NVAPI_OK)
