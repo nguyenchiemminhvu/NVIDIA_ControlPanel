@@ -316,7 +316,7 @@ namespace ControlPanel
 		return status;
 	}
 
-	NvAPI_Status GetConnectedDisplays(NvU32 *displayIDs, NvU32 *numDisplay)
+	NvAPI_Status GetConnectedDisplays(NvU32 *displayIDs, NvU32 &numDisplay)
 	{
 		NvAPI_Status status;
 
@@ -331,7 +331,6 @@ namespace ControlPanel
 		{
 			NvU32 displayIDCount = 0;
 
-			// alocations for the display ids
 			NV_GPU_DISPLAYIDS *tempDisplayIDs = NULL;
 			status = GetConnectedDisplays(gpuHandlers[i], &tempDisplayIDs, displayIDCount);
 			if (status != NVAPI_OK)
@@ -349,7 +348,7 @@ namespace ControlPanel
 				free((void *)tempDisplayIDs);
 		}
 
-		*numDisplay = num;
+		numDisplay = num;
 		return status;
 	}
 
@@ -430,7 +429,7 @@ namespace ControlPanel
 		NvU32 numDisplay = 0;
 		NvU32 displayIDs[NVAPI_MAX_DISPLAYS] = { 0 };
 		
-		status = GetConnectedDisplays(displayIDs, &numDisplay);
+		status = GetConnectedDisplays(displayIDs, numDisplay);
 		if (status != NVAPI_OK)
 		{
 			printf("GetConnectedDisplays() failed\n");
@@ -841,6 +840,8 @@ namespace Examples
 		status = ControlPanel::ShowCurrentDisplayConfigs();
 		CheckStatus(status);
 	}
+
+
 
 	void ResetAllDefaults()
 	{
