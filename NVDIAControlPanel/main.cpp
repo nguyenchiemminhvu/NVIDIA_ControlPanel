@@ -409,6 +409,14 @@ namespace ControlPanel
 				return status;
 			}
 
+			NvU32 shaderSubPipeCount = 0;
+			status = NvAPI_GPU_GetShaderSubPipeCount(physicalGpuHandles[i], &shaderSubPipeCount);
+			if (status != NVAPI_OK)
+			{
+				return status;
+			}
+			printf("Shader sub-pipe count: %d\n", shaderSubPipeCount);
+
 			for (NvU32 j = 0; j < NVAPI_MAX_LOGICAL_GPUS; j++)
 			{
 				if (logicalGpuHandles[j])
