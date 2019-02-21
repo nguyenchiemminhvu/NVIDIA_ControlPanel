@@ -29,241 +29,235 @@ void CheckStatus(NvAPI_Status status)
 
 namespace ControlPanel
 {
-	namespace Profile
+	bool DisplayProfileContents(NvDRSSessionHandle session, NvDRSProfileHandle profile)
 	{
-		bool DisplayProfileContents(NvDRSSessionHandle session, NvDRSProfileHandle profile)
-		{
-			NvAPI_Status status;
+		NvAPI_Status status;
 
-			NVDRS_PROFILE profileInfo = { 0 };
-			profileInfo.version = NVDRS_PROFILE_VER;
-			status = NvAPI_DRS_GetProfileInfo(session, profile, &profileInfo);
+		NVDRS_PROFILE profileInfo = { 0 };
+		profileInfo.version = NVDRS_PROFILE_VER;
+		status = NvAPI_DRS_GetProfileInfo(session, profile, &profileInfo);
+		if (status != NVAPI_OK)
+		{
+			PrintError(status);
+			return false;
+		}
+
+		wprintf(L"Profile name: %s\n", profileInfo.profileName);
+		printf("Number of applications associated with the profile: %d\n", profileInfo.numOfApps);
+		printf("Number of settings associated with the profile: %d\n", profileInfo.numOfSettings);
+		printf("Is predefined: %d\n", profileInfo.isPredefined);
+
+		if (profileInfo.numOfApps > 0)
+		{
+			NVDRS_APPLICATION *apps = new NVDRS_APPLICATION[profileInfo.numOfApps];
+			apps[0].version = NVDRS_APPLICATION_VER;
+
+			NvU32 appCount = profileInfo.numOfApps;
+			status = NvAPI_DRS_EnumApplications(session, profile, 0, &appCount, apps);
 			if (status != NVAPI_OK)
 			{
 				PrintError(status);
+				delete[] apps;
 				return false;
 			}
 
-			wprintf(L"Profile name: %s\n", profileInfo.profileName);
-			printf("Number of applications associated with the profile: %d\n", profileInfo.numOfApps);
-			printf("Number of settings associated with the profile: %d\n", profileInfo.numOfSettings);
-			printf("Is predefined: %d\n", profileInfo.isPredefined);
-
-			if (profileInfo.numOfApps > 0)
+			for (int i = 0; i < appCount; i++)
 			{
-				NVDRS_APPLICATION *apps = new NVDRS_APPLICATION[profileInfo.numOfApps];
-				apps[0].version = NVDRS_APPLICATION_VER;
-
-				NvU32 appCount = profileInfo.numOfApps;
-				status = NvAPI_DRS_EnumApplications(session, profile, 0, &appCount, apps);
-				if (status != NVAPI_OK)
-				{
-					PrintError(status);
-					delete[] apps;
-					return false;
-				}
-
-				for (int i = 0; i < appCount; i++)
-				{
-					wprintf(L"Executable: %s\n", apps[i].appName);
-					wprintf(L"User friendly name: %s\n", apps[i].userFriendlyName);
-					printf("Is predefined: %d\n", apps[i].isPredefined);
-				}
-
-				delete[] apps;
+				wprintf(L"Executable: %s\n", apps[i].appName);
+				wprintf(L"User friendly name: %s\n", apps[i].userFriendlyName);
+				printf("Is predefined: %d\n", apps[i].isPredefined);
 			}
 
-			if (profileInfo.numOfSettings > 0)
-			{
-				NVDRS_SETTING *settings = new NVDRS_SETTING[profileInfo.numOfSettings];
-				settings[0].version = NVDRS_SETTING_VER;
-
-				NvU32 settingCount = profileInfo.numOfSettings;
-				status = NvAPI_DRS_EnumSettings(session, profile, 0, &settingCount, settings);
-				if (status != NVAPI_OK)
-				{
-					PrintError(status);
-					delete[] settings;
-					return false;
-				}
-
-				for (int i = 0; i < settingCount; i++)
-				{
-					if (settings[i].settingLocation != NVDRS_CURRENT_PROFILE_LOCATION)
-						continue;
-
-					wprintf(L"Setting name: %s\n", settings[i].settingName);
-					printf("Setting ID: %X\n", settings[i].settingId);
-					printf("Is predefined: %d\n", settings[i].isCurrentPredefined);
-
-					switch (settings[i].settingType)
-					{
-					case NVDRS_DWORD_TYPE:
-						printf("Setting value: %X\n", settings[i].u32CurrentValue);
-						break;
-
-					case NVDRS_BINARY_TYPE:
-						printf("Setting value (length=%d): ", settings[i].binaryCurrentValue.valueLength);
-						for (unsigned int len = 0; len < settings[i].binaryCurrentValue.valueLength; len++)
-						{
-							printf(" %02X", settings[i].binaryCurrentValue.valueData[len]);
-						}
-						printf("\n");
-						break;
-
-					case NVDRS_WSTRING_TYPE:
-						wprintf(L"Setting value: %s\n", settings[i].wszCurrentValue);
-						break;
-					}
-				}
-			}
-
-			printf("\n");
-			return true;
+			delete[] apps;
 		}
 
-		NvAPI_Status EnumerateAllProfile()
+		if (profileInfo.numOfSettings > 0)
 		{
-			NvAPI_Status status;
+			NVDRS_SETTING *settings = new NVDRS_SETTING[profileInfo.numOfSettings];
+			settings[0].version = NVDRS_SETTING_VER;
 
-			NvDRSSessionHandle session = NULL;
-			status = NvAPI_DRS_CreateSession(&session);
+			NvU32 settingCount = profileInfo.numOfSettings;
+			status = NvAPI_DRS_EnumSettings(session, profile, 0, &settingCount, settings);
 			if (status != NVAPI_OK)
 			{
-				return status;
+				PrintError(status);
+				delete[] settings;
+				return false;
 			}
 
-			status = NvAPI_DRS_LoadSettings(session);
-			if (status != NVAPI_OK)
+			for (int i = 0; i < settingCount; i++)
 			{
-				return status;
-			}
+				if (settings[i].settingLocation != NVDRS_CURRENT_PROFILE_LOCATION)
+					continue;
 
-			NvDRSProfileHandle profile = NULL;
-			unsigned int profileIndex = 0;
-			while ((status = NvAPI_DRS_EnumProfiles(session, profileIndex, &profile)) == NVAPI_OK)
-			{
-				printf("Retrieve information from profile: %d\n", profileIndex);
-				DisplayProfileContents(session, profile);
+				wprintf(L"Setting name: %s\n", settings[i].settingName);
+				printf("Setting ID: %X\n", settings[i].settingId);
+				printf("Is predefined: %d\n", settings[i].isCurrentPredefined);
 
-				profileIndex++;
-			}
-
-			if (status == NVAPI_END_ENUMERATION)
-			{
-
-			}
-			else
-			{
-				if (status != NVAPI_OK)
+				switch (settings[i].settingType)
 				{
-					return status;
+				case NVDRS_DWORD_TYPE:
+					printf("Setting value: %X\n", settings[i].u32CurrentValue);
+					break;
+
+				case NVDRS_BINARY_TYPE:
+					printf("Setting value (length=%d): ", settings[i].binaryCurrentValue.valueLength);
+					for (unsigned int len = 0; len < settings[i].binaryCurrentValue.valueLength; len++)
+					{
+						printf(" %02X", settings[i].binaryCurrentValue.valueData[len]);
+					}
+					printf("\n");
+					break;
+
+				case NVDRS_WSTRING_TYPE:
+					wprintf(L"Setting value: %s\n", settings[i].wszCurrentValue);
+					break;
 				}
 			}
+		}
 
-			NvAPI_DRS_DestroySession(session);
-			session = NULL;
+		printf("\n");
+		return true;
+	}
 
+	NvAPI_Status EnumerateAllProfile()
+	{
+		NvAPI_Status status;
+
+		NvDRSSessionHandle session = NULL;
+		status = NvAPI_DRS_CreateSession(&session);
+		if (status != NVAPI_OK)
+		{
 			return status;
 		}
 
-		namespace BaseProfile
+		status = NvAPI_DRS_LoadSettings(session);
+		if (status != NVAPI_OK)
 		{
-			NvAPI_Status DisableVsync()
+			return status;
+		}
+
+		NvDRSProfileHandle profile = NULL;
+		unsigned int profileIndex = 0;
+		while ((status = NvAPI_DRS_EnumProfiles(session, profileIndex, &profile)) == NVAPI_OK)
+		{
+			printf("Retrieve information from profile: %d\n", profileIndex);
+			DisplayProfileContents(session, profile);
+
+			profileIndex++;
+		}
+
+		if (status == NVAPI_END_ENUMERATION)
+		{
+
+		}
+		else
+		{
+			if (status != NVAPI_OK)
 			{
-				NvAPI_Status status;
-
-				NvDRSSessionHandle session = NULL;
-				status = NvAPI_DRS_CreateSession(&session);
-				if (status != NVAPI_OK)
-				{
-					return status;
-				}
-
-				status = NvAPI_DRS_LoadSettings(session);
-				if (status != NVAPI_OK)
-				{
-					return status;
-				}
-
-				NvDRSProfileHandle profile = NULL;
-				status = NvAPI_DRS_GetBaseProfile(session, &profile);
-				if (status != NVAPI_OK)
-				{
-					return status;
-				}
-
-				NVDRS_SETTING settings = { 0 };
-				settings.version = NVDRS_SETTING_VER;
-				settings.settingId = ESetting::VSYNCMODE_ID;
-				settings.settingType = NVDRS_SETTING_TYPE::NVDRS_DWORD_TYPE;
-				settings.u32CurrentValue = EValues_VSYNCMODE::VSYNCMODE_FORCEOFF;
-				status = NvAPI_DRS_SetSetting(session, profile, &settings);
-				if (status != NVAPI_OK)
-				{
-					return status;
-				}
-
-				status = NvAPI_DRS_SaveSettings(session);
-				if (status != NVAPI_OK)
-				{
-					return status;
-				}
-
-				NvAPI_DRS_DestroySession(session);
-				session = NULL;
-
 				return status;
 			}
+		}
 
-			NvAPI_Status EnableVsync()
-			{
-				NvAPI_Status status;
+		NvAPI_DRS_DestroySession(session);
+		session = NULL;
 
-				NvDRSSessionHandle session = NULL;
-				status = NvAPI_DRS_CreateSession(&session);
-				if (status != NVAPI_OK)
-				{
-					return status;
-				}
+		return status;
+	}
 
-				status = NvAPI_DRS_LoadSettings(session);
-				if (status != NVAPI_OK)
-				{
-					return status;
-				}
+	NvAPI_Status DisableVsync()
+	{
+		NvAPI_Status status;
 
-				NvDRSProfileHandle profile = NULL;
-				status = NvAPI_DRS_GetBaseProfile(session, &profile);
-				if (status != NVAPI_OK)
-				{
-					return status;
-				}
+		NvDRSSessionHandle session = NULL;
+		status = NvAPI_DRS_CreateSession(&session);
+		if (status != NVAPI_OK)
+		{
+			return status;
+		}
 
-				NVDRS_SETTING settings = { 0 };
-				settings.version = NVDRS_SETTING_VER;
-				settings.settingId = ESetting::VSYNCMODE_ID;
-				settings.settingType = NVDRS_SETTING_TYPE::NVDRS_DWORD_TYPE;
-				settings.u32CurrentValue = EValues_VSYNCMODE::VSYNCMODE_FORCEON;
-				status = NvAPI_DRS_SetSetting(session, profile, &settings);
-				if (status != NVAPI_OK)
-				{
-					return status;
-				}
+		status = NvAPI_DRS_LoadSettings(session);
+		if (status != NVAPI_OK)
+		{
+			return status;
+		}
 
-				status = NvAPI_DRS_SaveSettings(session);
-				if (status != NVAPI_OK)
-				{
-					return status;
-				}
+		NvDRSProfileHandle profile = NULL;
+		status = NvAPI_DRS_GetBaseProfile(session, &profile);
+		if (status != NVAPI_OK)
+		{
+			return status;
+		}
 
-				NvAPI_DRS_DestroySession(session);
-				session = NULL;
+		NVDRS_SETTING settings = { 0 };
+		settings.version = NVDRS_SETTING_VER;
+		settings.settingId = ESetting::VSYNCMODE_ID;
+		settings.settingType = NVDRS_SETTING_TYPE::NVDRS_DWORD_TYPE;
+		settings.u32CurrentValue = EValues_VSYNCMODE::VSYNCMODE_FORCEOFF;
+		status = NvAPI_DRS_SetSetting(session, profile, &settings);
+		if (status != NVAPI_OK)
+		{
+			return status;
+		}
 
-				return status;
-			}
-		};
-	};
+		status = NvAPI_DRS_SaveSettings(session);
+		if (status != NVAPI_OK)
+		{
+			return status;
+		}
+
+		NvAPI_DRS_DestroySession(session);
+		session = NULL;
+
+		return status;
+	}
+
+	NvAPI_Status EnableVsync()
+	{
+		NvAPI_Status status;
+
+		NvDRSSessionHandle session = NULL;
+		status = NvAPI_DRS_CreateSession(&session);
+		if (status != NVAPI_OK)
+		{
+			return status;
+		}
+
+		status = NvAPI_DRS_LoadSettings(session);
+		if (status != NVAPI_OK)
+		{
+			return status;
+		}
+
+		NvDRSProfileHandle profile = NULL;
+		status = NvAPI_DRS_GetBaseProfile(session, &profile);
+		if (status != NVAPI_OK)
+		{
+			return status;
+		}
+
+		NVDRS_SETTING settings = { 0 };
+		settings.version = NVDRS_SETTING_VER;
+		settings.settingId = ESetting::VSYNCMODE_ID;
+		settings.settingType = NVDRS_SETTING_TYPE::NVDRS_DWORD_TYPE;
+		settings.u32CurrentValue = EValues_VSYNCMODE::VSYNCMODE_FORCEON;
+		status = NvAPI_DRS_SetSetting(session, profile, &settings);
+		if (status != NVAPI_OK)
+		{
+			return status;
+		}
+
+		status = NvAPI_DRS_SaveSettings(session);
+		if (status != NVAPI_OK)
+		{
+			return status;
+		}
+
+		NvAPI_DRS_DestroySession(session);
+		session = NULL;
+
+		return status;
+	}
 
 
 	NvAPI_Status GetGPUs(NvPhysicalGpuHandle gpuHandles[NVAPI_MAX_PHYSICAL_GPUS], NvU32 &gpuCount)
@@ -522,49 +516,6 @@ namespace ControlPanel
 		return status;	// Custom Display.
 	}
 
-	NvAPI_Status ColorControl(NV_COLOR_CMD command, NV_COLOR_DATA *data = NULL)
-	{
-		NvAPI_Status status;
-
-		NV_GPU_DISPLAYIDS *displayIDs = NULL;
-		NvU32 displayIDCount = 0;
-
-		NvPhysicalGpuHandle gpuHandlers[NVAPI_MAX_PHYSICAL_GPUS] = { 0 };
-		NvU32 gpuCount = 0;
-
-		status = GetGPUs(gpuHandlers, gpuCount);
-		if (status != NVAPI_OK)
-		{
-			return status;
-		}
-
-		for (NvU32 i = 0; i < gpuCount; i++)
-		{
-			status = GetConnectedDisplays(gpuHandlers[i], &displayIDs, displayIDCount);
-			if (status != NVAPI_OK)
-			{
-				return status;
-			}
-
-			NV_COLOR_DATA colorData;
-			memset(&colorData, 0, sizeof(NV_COLOR_DATA));
-			colorData.version = NV_COLOR_DATA_VER;
-			colorData.size = sizeof(NV_COLOR_DATA);
-			colorData.cmd = NV_COLOR_CMD_GET;
-
-			for (NvU32 j = 0; j < displayIDCount; j++)
-			{
-				status = NvAPI_Disp_ColorControl(displayIDs[j].displayId, data ? data : &colorData);
-				if (status != NVAPI_OK)
-				{
-					int a = 0;
-				}
-			}
-		}
-
-		return status;
-	}
-
 	NvAPI_Status AllocateAndGetDisplayConfig(NvU32* pathInfoCount, NV_DISPLAYCONFIG_PATH_INFO** pPathInfo)
 	{
 		NvAPI_Status status;
@@ -668,7 +619,7 @@ namespace ControlPanel
 		printf("\nGPU index\tGPU ID\t\tDisplayIDs of displays\n");
 
 		// Enumerate the physical GPU handle
-		status = NvAPI_EnumPhysicalGPUs(hPhysicalGpu, &physicalGpuCount);
+		status = GetGPUs(hPhysicalGpu, physicalGpuCount);
 		if (status != NVAPI_OK)
 		{
 			printf("Cannot enumerate GPUs in the system...\n");
@@ -741,6 +692,49 @@ namespace ControlPanel
 		return status;
 	}
 
+	NvAPI_Status ColorControl(NV_COLOR_CMD command, NV_COLOR_DATA *data = NULL)
+	{
+		NvAPI_Status status;
+
+		NV_GPU_DISPLAYIDS *displayIDs = NULL;
+		NvU32 displayIDCount = 0;
+
+		NvPhysicalGpuHandle gpuHandlers[NVAPI_MAX_PHYSICAL_GPUS] = { 0 };
+		NvU32 gpuCount = 0;
+
+		status = GetGPUs(gpuHandlers, gpuCount);
+		if (status != NVAPI_OK)
+		{
+			return status;
+		}
+
+		for (NvU32 i = 0; i < gpuCount; i++)
+		{
+			status = GetConnectedDisplays(gpuHandlers[i], &displayIDs, displayIDCount);
+			if (status != NVAPI_OK)
+			{
+				return status;
+			}
+
+			NV_COLOR_DATA colorData;
+			memset(&colorData, 0, sizeof(NV_COLOR_DATA));
+			colorData.version = NV_COLOR_DATA_VER;
+			colorData.size = sizeof(NV_COLOR_DATA);
+			colorData.cmd = NV_COLOR_CMD_GET;
+
+			for (NvU32 j = 0; j < displayIDCount; j++)
+			{
+				status = NvAPI_Disp_ColorControl(displayIDs[j].displayId, data ? data : &colorData);
+				if (status != NVAPI_OK)
+				{
+					int a = 0;
+				}
+			}
+		}
+
+		return status;
+	}
+
 	NvAPI_Status RestoreAllDefaults()
 	{
 		NvAPI_Status status;
@@ -780,30 +774,21 @@ namespace Examples
 		CheckStatus(status);
 	}
 
-	void DisplayHandle()
-	{
-		NvAPI_Status status;
-
-		
-
-		CheckStatus(status);
-	}
-
 	void DisableVSync()
 	{
-		NvAPI_Status status = ControlPanel::Profile::BaseProfile::DisableVsync();
+		NvAPI_Status status = ControlPanel::DisableVsync();
 		CheckStatus(status);
 	}
 
 	void EnableVSync()
 	{
-		NvAPI_Status status = ControlPanel::Profile::BaseProfile::EnableVsync();
+		NvAPI_Status status = ControlPanel::EnableVsync();
 		CheckStatus(status);
 	}
 
 	void EnumerateAllProfile()
 	{
-		NvAPI_Status status = ControlPanel::Profile::EnumerateAllProfile();
+		NvAPI_Status status = ControlPanel::EnumerateAllProfile();
 		CheckStatus(status);
 	}
 
@@ -850,7 +835,7 @@ namespace Examples
 		CheckStatus(status);
 	}
 
-	void DisplayConfiguration()
+	void ShowDisplayConfiguration()
 	{
 		NvAPI_Status status;
 		status = ControlPanel::ShowCurrentDisplayConfigs();
@@ -873,7 +858,7 @@ int main(int argc, char **argv)
 	if (status != NVAPI_OK)
 		PrintError(status);
 
-	Examples::ReadGPUDriverInfo();
+	Examples::ShowDisplayConfiguration();
 
 	NvAPI_Unload();
 	return 0;
