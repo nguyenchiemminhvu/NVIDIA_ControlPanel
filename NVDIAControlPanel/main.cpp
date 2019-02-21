@@ -264,14 +264,28 @@ namespace ControlPanel
 			}
 		};
 	};
-	
 
-	NvAPI_Status GetGPUs(NvPhysicalGpuHandle gpuHandlers[NVAPI_MAX_PHYSICAL_GPUS], NvU32 &gpuCount)
+
+	NvAPI_Status GetGPUs(NvPhysicalGpuHandle gpuHandles[NVAPI_MAX_PHYSICAL_GPUS], NvU32 &gpuCount)
 	{
 		NvAPI_Status status;
 
-		// Get all GPU handles
-		status = NvAPI_EnumPhysicalGPUs(gpuHandlers, &gpuCount);
+		// Get all physical GPU handles
+		status = NvAPI_EnumPhysicalGPUs(gpuHandles, &gpuCount);
+		if (status != NVAPI_OK)
+		{
+			PrintError(status);
+		}
+
+		return status;
+	}
+
+	NvAPI_Status GetGPUs(NvLogicalGpuHandle gpuHandles[NVAPI_MAX_LOGICAL_GPUS], NvU32 &gpuCount)
+	{
+		NvAPI_Status status;
+
+		// Get all logical GPU handles
+		status = NvAPI_EnumLogicalGPUs(gpuHandles, &gpuCount);
 		if (status != NVAPI_OK)
 		{
 			PrintError(status);
@@ -342,6 +356,68 @@ namespace ControlPanel
 		}
 
 		*numDisplay = num;
+		return status;
+	}
+
+	NvAPI_Status ReadGPUDriverInfo()
+	{
+		NvAPI_Status status;
+
+		NvPhysicalGpuHandle physicalGpuHandles[NVAPI_MAX_PHYSICAL_GPUS] = { 0 };
+		NvU32 physicalGpuCount = 0;
+
+		status = GetGPUs(physicalGpuHandles, physicalGpuCount);
+		if (status != NVAPI_OK)
+		{
+			return status;
+		}
+		
+		for (NvU32 i = 0; i < physicalGpuCount; i++)
+		{
+			NvAPI_ShortString physicalGpuName;
+			status = NvAPI_GPU_GetFullName(physicalGpuHandles[i], physicalGpuName);
+			if (status != NVAPI_OK)
+			{
+				return status;
+			}
+			printf("Physical GPU name: %s\n", physicalGpuName);
+
+			NvU32 physicalGpuCore = 0;
+			status = NvAPI_GPU_GetGpuCoreCount(physicalGpuHandles[i], &physicalGpuCore);
+			if (status != NVAPI_OK)
+			{
+				return status;
+			}
+			printf("Physical GPU core: %d\n", physicalGpuCore);
+
+			NV_DISPLAY_DRIVER_MEMORY_INFO memoryInfo;
+			memset(&memoryInfo, 0, sizeof(NV_DISPLAY_DRIVER_MEMORY_INFO));
+			memoryInfo.version = NV_DISPLAY_DRIVER_MEMORY_INFO_VER;
+			status = NvAPI_GPU_GetMemoryInfo(physicalGpuHandles[i], &memoryInfo);
+			if (status != NVAPI_OK)
+			{
+				return status;
+			}
+			printf("Display memory: %d (Mb)\n", memoryInfo.availableDedicatedVideoMemory / 1024);
+			printf("Shared memory: %d (Mb)\n", memoryInfo.sharedSystemMemory / 1024);
+			printf("Total memory: %d (Mb)\n", memoryInfo.availableDedicatedVideoMemory / 1024 + memoryInfo.sharedSystemMemory / 1024);
+
+			NvLogicalGpuHandle logicalGpuHandles[NVAPI_MAX_LOGICAL_GPUS] = { 0 };
+			status = NvAPI_GetLogicalGPUFromPhysicalGPU(physicalGpuHandles[i], logicalGpuHandles);
+			if (status != NVAPI_OK)
+			{
+				return status;
+			}
+
+			for (NvU32 j = 0; j < NVAPI_MAX_LOGICAL_GPUS; j++)
+			{
+				if (logicalGpuHandles[j])
+				{
+					// TODO: do something with logical gpu
+				}
+			}
+		}
+
 		return status;
 	}
 
@@ -657,35 +733,6 @@ namespace ControlPanel
 		return status;
 	}
 
-	NvAPI_Status ReadGPUDriverInfo()
-	{
-		NvAPI_Status status;
-
-		NvPhysicalGpuHandle gpuHandles[NVAPI_MAX_PHYSICAL_GPUS] = { 0 };
-		NvU32 gpuCount = 0;
-
-		status = GetGPUs(gpuHandles, gpuCount);
-		if (status != NVAPI_OK)
-		{
-			return status;
-		}
-
-		for (NvU32 i = 0; i < gpuCount; i++)
-		{
-			NV_DISPLAY_DRIVER_MEMORY_INFO memoryInfo;
-			memset(&memoryInfo, 0, sizeof(NV_DISPLAY_DRIVER_MEMORY_INFO));
-			memoryInfo.version = NV_DISPLAY_DRIVER_MEMORY_INFO_VER;
-
-			status = NvAPI_GPU_GetMemoryInfo(gpuHandles[i], &memoryInfo);
-			if (status != NVAPI_OK)
-			{
-				return status;
-			}
-		}
-
-		return status;
-	}
-
 	NvAPI_Status RestoreAllDefaults()
 	{
 		NvAPI_Status status;
@@ -719,21 +766,36 @@ namespace ControlPanel
 
 namespace Examples
 {
-	void EnumerateAllProfile()
-	{
-		NvAPI_Status status = ControlPanel::Profile::EnumerateAllProfile();
-		CheckStatus(status);
-	}
-
 	void ReadGPUDriverInfo()
 	{
 		NvAPI_Status status = ControlPanel::ReadGPUDriverInfo();
 		CheckStatus(status);
 	}
 
+	void DisplayHandle()
+	{
+		NvAPI_Status status;
+
+		
+
+		CheckStatus(status);
+	}
+
 	void DisableVSync()
 	{
 		NvAPI_Status status = ControlPanel::Profile::BaseProfile::DisableVsync();
+		CheckStatus(status);
+	}
+
+	void EnableVSync()
+	{
+		NvAPI_Status status = ControlPanel::Profile::BaseProfile::EnableVsync();
+		CheckStatus(status);
+	}
+
+	void EnumerateAllProfile()
+	{
+		NvAPI_Status status = ControlPanel::Profile::EnumerateAllProfile();
 		CheckStatus(status);
 	}
 
