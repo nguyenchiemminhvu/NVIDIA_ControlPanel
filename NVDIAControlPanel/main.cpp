@@ -816,6 +816,37 @@ namespace ControlPanel
 		return status;
 	}
 
+	NvAPI_Status ShowClockFrequencies()
+	{
+		NvAPI_Status status;
+
+		NvPhysicalGpuHandle gpuHandles[NVAPI_MAX_PHYSICAL_GPUS] = { 0 };
+		NvU32 gpuCount = 0;
+
+		status = GetGPUs(gpuHandles, gpuCount);
+		if (status != NVAPI_OK)
+		{
+			return status;
+		}
+
+		for (NvU32 gpuIndex = 0; gpuIndex < gpuCount; gpuIndex++)
+		{
+			NV_GPU_CLOCK_FREQUENCIES clocks;
+			memset(&clocks, 0, sizeof(NV_GPU_CLOCK_FREQUENCIES));
+			clocks.version = NV_GPU_CLOCK_FREQUENCIES_VER;
+
+			status = NvAPI_GPU_GetAllClockFrequencies(gpuHandles[gpuIndex], &clocks);
+			if (status != NVAPI_OK)
+			{
+				return status;
+			}
+
+
+		}
+
+		return status;
+	}
+
 	NvAPI_Status ShowCoolerSettings()
 	{
 		NvAPI_Status status;
@@ -966,6 +997,12 @@ namespace Examples
 		CheckStatus(status);
 	}
 
+	void ShowClockFrequencies()
+	{
+		NvAPI_Status status = ControlPanel::ShowClockFrequencies();
+		CheckStatus(status);
+	}
+
 	void ShowCoolerSettings()
 	{
 		NvAPI_Status status = ControlPanel::ShowCoolerSettings();
@@ -988,7 +1025,7 @@ int main(int argc, char **argv)
 	if (status != NVAPI_OK)
 		PrintError(status);
 
-	Examples::ShowCoolerSettings();
+	Examples::ShowClockFrequencies();
 
 	NvAPI_Unload();
 	return 0;
