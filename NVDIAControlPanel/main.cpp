@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <Windows.h>
 
 /*
 This function is used to print to the command line a text message
@@ -481,7 +482,7 @@ namespace ControlPanel
 		}
 		else
 			printf(".....Success!\n");
-		_sleep(5000);
+		Sleep(5000);
 
 		printf("NvAPI_DISP_SaveCustomDisplay()\n");
 
@@ -494,7 +495,7 @@ namespace ControlPanel
 		else
 			printf(".....Success!\n");
 
-		_sleep(5000);
+		Sleep(5000);
 
 		printf("NvAPI_DISP_RevertCustomDisplayTrial()\n");
 
@@ -508,7 +509,7 @@ namespace ControlPanel
 		else
 		{
 			printf(".....Success!\n");
-			_sleep(5000);
+			Sleep(5000);
 
 		}
 
@@ -691,6 +692,45 @@ namespace ControlPanel
 		return status;
 	}
 
+	NvAPI_Status ShowCurrentTemperature()
+	{
+		NvAPI_Status status;
+
+		NvPhysicalGpuHandle gpuHandles[NVAPI_MAX_PHYSICAL_GPUS] = { 0 };
+		NvU32 gpuCount = 0;
+		status = GetGPUs(gpuHandles, gpuCount);
+		if (status != NVAPI_OK)
+		{
+			return status;
+		}
+		
+		while (!(GetKeyState(VK_RETURN) & 0x8000))
+		{
+			for (NvU32 gpuIndex = 0; gpuIndex < gpuCount; gpuIndex++)
+			{
+				NV_GPU_THERMAL_SETTINGS thermalSettings;
+				memset(&thermalSettings, 0, sizeof(NV_GPU_THERMAL_SETTINGS));
+				thermalSettings.version = NV_GPU_THERMAL_SETTINGS_VER;
+
+				status = NvAPI_GPU_GetThermalSettings(gpuHandles[gpuIndex], gpuIndex, &thermalSettings);
+				if (status != NVAPI_OK)
+				{
+					return status;
+				}
+
+				for (NvU32 thermalIndex = 0; thermalIndex < NVAPI_MAX_THERMAL_SENSORS_PER_GPU; thermalIndex++)
+				{
+					if (thermalSettings.sensor[thermalIndex].currentTemp == 0) // unused sensor
+						continue;
+
+					printf("Current temperature in sensor %d: %d\n", thermalIndex + 1, thermalSettings.sensor[thermalIndex].currentTemp);
+				}
+			}
+		}
+
+		return status;
+	}
+
 	NvAPI_Status ColorControl(NV_COLOR_CMD command, NV_COLOR_DATA *data = NULL)
 	{
 		NvAPI_Status status;
@@ -841,7 +881,11 @@ namespace Examples
 		CheckStatus(status);
 	}
 
-
+	void ShowCurrentTemperature()
+	{
+		NvAPI_Status status = ControlPanel::ShowCurrentTemperature();
+		CheckStatus(status);
+	}
 
 	void ResetAllDefaults()
 	{
@@ -859,7 +903,7 @@ int main(int argc, char **argv)
 	if (status != NVAPI_OK)
 		PrintError(status);
 
-	Examples::ShowDisplayConfiguration();
+	Examples::ShowCurrentTemperature();
 
 	NvAPI_Unload();
 	return 0;
