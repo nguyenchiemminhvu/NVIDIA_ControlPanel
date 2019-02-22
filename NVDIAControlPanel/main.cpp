@@ -797,6 +797,20 @@ namespace ControlPanel
 			{
 				return status;
 			}
+
+			NV_GPU_PERF_PSTATE_ID currentPState;
+			status = NvAPI_GPU_GetCurrentPstate(gpuHandles[gpuIndex], &currentPState);
+			if (status != NVAPI_OK)
+			{
+				return status;
+			}
+
+			printf("Performance |");
+			for (NvU32 i = 0; i < currentPState; i++)
+				printf("=");
+			for (NvU32 i = 0; i < NV_GPU_PERF_PSTATE_ID::NVAPI_GPU_PERF_PSTATE_P15 - currentPState; i++)
+				printf("-");
+			printf("| Quality\n");
 		}
 
 		return status;
