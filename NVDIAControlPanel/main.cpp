@@ -816,6 +816,37 @@ namespace ControlPanel
 		return status;
 	}
 
+	NvAPI_Status ShowCoolerSettings()
+	{
+		NvAPI_Status status;
+
+		NvPhysicalGpuHandle gpuHandles[NVAPI_MAX_PHYSICAL_GPUS] = { 0 };
+		NvU32 gpuCount = 0;
+
+		status = GetGPUs(gpuHandles, gpuCount);
+		if (status != NVAPI_OK)
+		{
+			return status;
+		}
+
+		while (!(GetKeyState(VK_RETURN) & 0x8000))
+		{
+			for (NvU32 gpuIndex = 0; gpuIndex < gpuCount; gpuIndex++)
+			{
+				NvU32 rpm = 0;
+				status = NvAPI_GPU_GetTachReading(gpuHandles[gpuIndex], &rpm);
+				if (status != NVAPI_OK)
+				{
+					return status;
+				}
+
+				printf("GPU's Fan rotation: %d (rpm)\n", rpm);
+			}
+		}
+
+		return status;
+	}
+
 	NvAPI_Status RestoreAllDefaults()
 	{
 		NvAPI_Status status;
@@ -935,6 +966,12 @@ namespace Examples
 		CheckStatus(status);
 	}
 
+	void ShowCoolerSettings()
+	{
+		NvAPI_Status status = ControlPanel::ShowCoolerSettings();
+		CheckStatus(status);
+	}
+
 	void ResetAllDefaults()
 	{
 		NvAPI_Status status = ControlPanel::RestoreAllDefaults();
@@ -951,7 +988,7 @@ int main(int argc, char **argv)
 	if (status != NVAPI_OK)
 		PrintError(status);
 
-	Examples::ShowPerformanceStates();
+	Examples::ShowCoolerSettings();
 
 	NvAPI_Unload();
 	return 0;
