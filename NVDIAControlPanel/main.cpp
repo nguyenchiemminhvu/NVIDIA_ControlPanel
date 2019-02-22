@@ -841,7 +841,21 @@ namespace ControlPanel
 				return status;
 			}
 
+			while (!(GetKeyState(VK_RETURN) & 0x8000))
+			{
+				NvU32 domainCount = 0;
+				for (NvU32 i = 0; i < NVAPI_MAX_GPU_PUBLIC_CLOCKS; i++)
+				{
+					if (!clocks.domain[i].bIsPresent)
+						continue;
 
+					domainCount++;
+					printf("Frequency of domain %d: %d (MHz)\n", domainCount, clocks.domain[i].frequency / 1000);
+				}
+
+				printf("\n");
+				Sleep(1000);
+			}
 		}
 
 		return status;
